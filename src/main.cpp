@@ -1,48 +1,61 @@
-#include <U8g2lib.h>
+#include <Wire.h>
+#include <Adafruit_I2CDevice.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C display(U8G2_R0, U8X8_PIN_NONE);
+Adafruit_SSD1306 display(128, 64, &Wire, -1);
 
-static const unsigned char PROGMEM batt_empty[] = {
-    0xff, 0x7f, 0x01, 0x40, 0x01, 0xc0, 0x01, 0xc0, 0x01, 0xc0, 0x01, 0xc0,
-    0x01, 0x40, 0xff, 0x7f};
+float fVoltageMatrix[22][2] = {
+    {4.2, 100},
+    {4.15, 95},
+    {4.11, 90},
+    {4.08, 85},
+    {4.02, 80},
+    {3.98, 75},
+    {3.95, 70},
+    {3.91, 65},
+    {3.87, 60},
+    {3.85, 55},
+    {3.84, 50},
+    {3.82, 45},
+    {3.80, 40},
+    {3.79, 35},
+    {3.77, 30},
+    {3.75, 25},
+    {3.73, 20},
+    {3.71, 15},
+    {3.69, 10},
+    {3.61, 5},
+    {3.27, 0},
+    {0, 0}};
 
-static const unsigned char PROGMEM batt_3left[] = {
-    0xff, 0x7f, 0x0f, 0x40, 0x0f, 0xc0, 0x0f, 0xc0, 0x0f, 0xc0, 0x0f, 0xc0,
-    0x0f, 0x40, 0xff, 0x7f};
-
-static const unsigned char PROGMEM batt_6left[] = {
-    0xff, 0x7f, 0x7f, 0x40, 0x7f, 0xc0, 0x7f, 0xc0, 0x7f, 0xc0, 0x7f, 0xc0,
-    0x7f, 0x40, 0xff, 0x7f};
-
-static const unsigned char PROGMEM batt_9left[] = {
-    0xff, 0x7f, 0xff, 0x43, 0xff, 0xc3, 0xff, 0xc3, 0xff, 0xc3, 0xff, 0xc3,
-    0xff, 0x43, 0xff, 0x7f};
-
-static const unsigned char PROGMEM batt_12left[] = {
-    0xff, 0x7f, 0xff, 0x5f, 0xff, 0xdf, 0xff, 0xdf, 0xff, 0xdf, 0xff, 0xdf,
-    0xff, 0x5f, 0xff, 0x7f};
-
-static const unsigned char PROGMEM batt_full[] = {
-    0xff, 0x7f, 0xff, 0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-    0xff, 0x7f, 0xff, 0x7f};
-
-static const unsigned char PROGMEM batt_charging[] = {
-    0xff, 0x7f, 0x7b, 0x7c, 0x77, 0xf8, 0x6f, 0xf2, 0x4f, 0xf6, 0x1f, 0xee,
-    0x3f, 0x5e, 0xff, 0x7f};
-
-void setup(void)
+// https://theiotprojects.com/battery-status-monitoring-system-using-esp8266-arduino-iot-cloud
+int getBatteryPercentage(int fVoltage)
 {
-  display.begin();
+  int i = 0;
+  int perc = 100;
+  for (i = 20; i >= 0; i--)
+  {
+    if (fVoltageMatrix[i][0] >= fVoltage)
+    {
+      perc = fVoltageMatrix[i + 1][1];
+      break;
+    }
+  }
+  return perc;
 }
 
-void loop(void)
+void setup()
 {
-  display.clearBuffer();
+  Serial.begin(115200);
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.setTextColor(WHITE);
+  display.setCursor(0, 0);
+  display.write("80%");
+  display.display();
+}
 
-  display.setFont(u8g2_font_ncenB08_tr);
-  display.drawStr(0, 10, "Pengunjung Telaga Sarangan Magetan Capai 12 Ribu di Hari Pertama 2022");
-
-  display.drawXBMP(110, 56, 16, 8, batt_full);
-  display.sendBuffer();
-  delay(1000);
+void loop()
+{
 }
