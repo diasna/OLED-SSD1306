@@ -2,8 +2,17 @@
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <WiFiUtil.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
+#include <ArduinoJson.h>
+#include <properties.h>
+
+#define XSTR(x) #x
+#define STR(x) XSTR(x)
 
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
+WiFiUtil wiFiUtil;
 
 float fVoltageMatrix[22][2] = {
     {4.2, 100},
@@ -48,14 +57,82 @@ int getBatteryPercentage(int fVoltage)
 void setup()
 {
   Serial.begin(115200);
+
+  //Init WiFi
+  wiFiUtil.setup();
+
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.clearDisplay();
   display.setTextColor(WHITE);
+}
+
+size_t progress = 0;
+DynamicJsonDocument doc(2048);
+
+void displayMain(const char *msg)
+{
+  display.clearDisplay();
+
+  //Headline progress
   display.setCursor(0, 0);
-  display.write("80%");
+  char stat[6];
+  sprintf(stat, "%i/%i", (progress + 1), doc.size());
+  display.write(stat);
+  display.display();
+
+  //Clock
+  display.setCursor(98, 0);
+  display.write("01:28");
+  display.display();
+
+  //Headline
+  display.setCursor(0, 12);
+  display.write(msg);
   display.display();
 }
 
 void loop()
 {
+  if (doc.size() == 0)
+  {
+    if (WiFi.status() == WL_CONNECTED)
+    {
+      WiFiClient client;
+      HTTPClient http;
+      http.begin(client, PARSEURL);
+      http.GET();
+      DeserializationError error = deserializeJson(doc, http.getStream());
+      if (error)
+      {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str());
+        return;
+      }
+      http.end();
+      WiFi.disconnect();
+      WiFi.forceSleepBegin();
+      delay(1);
+    }
+    else
+    {
+      Serial.println("WiFi Disconnected");
+      WiFi.forceSleepWake();
+      wiFiUtil.setup();
+      delay(100);
+    }
+  }
+  else
+  {
+    if (progress < doc.size())
+    {
+      displayMain(doc[progress]);
+      progress++;
+    }
+    else
+    {
+      progress = 0;
+      doc.clear();
+    }
+    delay(50000);
+  }
 }
