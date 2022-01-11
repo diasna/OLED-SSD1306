@@ -2,17 +2,24 @@
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <NTPClient.h>
 #include <WiFiUtil.h>
 #include <ESP8266HTTPClient.h>
 #include <WiFiClient.h>
 #include <ArduinoJson.h>
 #include <properties.h>
+#include <WiFiUdp.h>
 
 #define XSTR(x) #x
 #define STR(x) XSTR(x)
 
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 WiFiUtil wiFiUtil;
+
+const long utcOffsetInSeconds = 25200;
+
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "id.pool.ntp.org", utcOffsetInSeconds);
 
 float fVoltageMatrix[22][2] = {
     {4.2, 100},
@@ -60,6 +67,8 @@ void setup()
 
   //Init WiFi
   wiFiUtil.setup();
+  
+  timeClient.begin();
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.clearDisplay();
@@ -82,7 +91,9 @@ void displayMain(const char *msg)
 
   //Clock
   display.setCursor(98, 0);
-  display.write("01:28");
+  char time[6];
+  sprintf(time, "%02d:%02d", timeClient.getHours(), timeClient.getMinutes());
+  display.write(time);
   display.display();
 
   //Headline
@@ -109,6 +120,7 @@ void loop()
         return;
       }
       http.end();
+      timeClient.update();
       WiFi.disconnect();
       WiFi.forceSleepBegin();
       delay(1);
