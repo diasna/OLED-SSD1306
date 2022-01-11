@@ -14,6 +14,7 @@
 #define STR(x) XSTR(x)
 
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
+
 WiFiUtil wiFiUtil;
 
 const long utcOffsetInSeconds = 25200;
