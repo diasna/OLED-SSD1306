@@ -68,7 +68,7 @@ void setup()
 
   //Init WiFi
   wiFiUtil.setup();
-  
+
   timeClient.begin();
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -102,7 +102,7 @@ void displayMain(const char *msg)
   display.write(msg);
   display.display();
 }
-
+int displayDelay = 0;
 void loop()
 {
   if (doc.size() == 0)
@@ -136,16 +136,21 @@ void loop()
   }
   else
   {
-    if (progress < doc.size())
+    if (displayDelay > 50000)
     {
-      displayMain(doc[progress]);
-      progress++;
+      if (progress < doc.size())
+      {
+        displayMain(doc[progress]);
+        progress++;
+      }
+      else
+      {
+        progress = 0;
+        doc.clear();
+      }
+      displayDelay = 0;
     }
-    else
-    {
-      progress = 0;
-      doc.clear();
-    }
-    delay(50000);
+    displayDelay++;
+    delay(1);
   }
 }
