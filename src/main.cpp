@@ -13,60 +13,27 @@
 #define XSTR(x) #x
 #define STR(x) XSTR(x)
 
-Adafruit_SSD1306 display(128, 64, &Wire, -1);
-
 WiFiUtil wiFiUtil;
 
-const long utcOffsetInSeconds = 25200;
+const uint8_t PIN_ROTARY_A = 12;
+const uint8_t PIN_ROTARY_B = 14;
 
+//Clock
+const long utcOffsetInSeconds = 25200;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "id.pool.ntp.org", utcOffsetInSeconds);
 
-float fVoltageMatrix[22][2] = {
-    {4.2, 100},
-    {4.15, 95},
-    {4.11, 90},
-    {4.08, 85},
-    {4.02, 80},
-    {3.98, 75},
-    {3.95, 70},
-    {3.91, 65},
-    {3.87, 60},
-    {3.85, 55},
-    {3.84, 50},
-    {3.82, 45},
-    {3.80, 40},
-    {3.79, 35},
-    {3.77, 30},
-    {3.75, 25},
-    {3.73, 20},
-    {3.71, 15},
-    {3.69, 10},
-    {3.61, 5},
-    {3.27, 0},
-    {0, 0}};
+//Display
+Adafruit_SSD1306 display(128, 64, &Wire, -1);
+int displayDelay = 0;
 
-// https://theiotprojects.com/battery-status-monitoring-system-using-esp8266-arduino-iot-cloud
-int getBatteryPercentage(int fVoltage)
-{
-  int i = 0;
-  int perc = 100;
-  for (i = 20; i >= 0; i--)
-  {
-    if (fVoltageMatrix[i][0] >= fVoltage)
-    {
-      perc = fVoltageMatrix[i + 1][1];
-      break;
-    }
-  }
-  return perc;
-}
+size_t progress = 0;
+DynamicJsonDocument doc(2048);
 
 void setup()
 {
   Serial.begin(115200);
 
-  //Init WiFi
   wiFiUtil.setup();
 
   timeClient.begin();
@@ -74,16 +41,16 @@ void setup()
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
   display.clearDisplay();
   display.setTextColor(WHITE);
-}
 
-size_t progress = 0;
-DynamicJsonDocument doc(2048);
+  pinMode(PIN_ROTARY_A, INPUT_PULLUP);
+  pinMode(PIN_ROTARY_B, INPUT);
+}
 
 void displayMain(const char *msg)
 {
   display.clearDisplay();
 
-  //Headline progress
+  //Progress
   display.setCursor(0, 0);
   char stat[6];
   sprintf(stat, "%i/%i", (progress + 1), doc.size());
@@ -97,12 +64,15 @@ void displayMain(const char *msg)
   display.write(time);
   display.display();
 
-  //Headline
+  //Main Text
   display.setCursor(0, 12);
   display.write(msg);
   display.display();
 }
-int displayDelay = 0;
+
+int prevA = 0;
+int prevB = 0;
+
 void loop()
 {
   if (doc.size() == 0)
@@ -153,4 +123,22 @@ void loop()
     displayDelay++;
     delay(1);
   }
+
+  byte buttonStateA = digitalRead(PIN_ROTARY_A);
+  byte buttonStateB = digitalRead(PIN_ROTARY_B);
+
+  if (prevA != buttonStateA && prevB == buttonStateB)
+  {
+    if (buttonStateB == buttonStateA)
+    {
+      Serial.println("Increase");
+    }
+    else
+    {
+      Serial.println("Decrease");
+    }
+  }
+
+  prevA = buttonStateA;
+  prevB = buttonStateB;
 }
