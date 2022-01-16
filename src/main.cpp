@@ -131,12 +131,29 @@ void loop()
   {
     if (buttonStateB == buttonStateA)
     {
-      Serial.println("Increase");
+      if (progress < doc.size() - 1)
+      {
+        progress++;
+      }
+      else
+      {
+        progress = 0;
+      }
     }
     else
     {
-      Serial.println("Decrease");
+      if (progress > 0)
+      {
+        progress--;
+      }
+      else
+      {
+        progress = doc.size() - 1;
+      }
     }
+
+    displayMain(doc[progress]);
+    displayDelay = 0;
   }
 
   prevA = buttonStateA;
